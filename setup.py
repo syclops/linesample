@@ -5,9 +5,12 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="linesample",
-    version="0.1.0",
+    version="0.1.1",
     author="Steve Matsumoto",
     author_email="stephanos.matsumoto@sporic.me",
+    entry_points={
+        'console_scripts': ['linesample=linesample.__main__:main']
+    },
     description="Utility to randomly sample lines from a file",
     long_description=long_description,
     long_description_content_type="text/markdown",

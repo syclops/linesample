@@ -35,18 +35,16 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
-import argparse
 import fileinput
 import math
 import random
-import sys
 from typing import (
-    List,
     Optional,
+    Union,
 )
 
 
-def sample_by_fraction(infile: str, fraction: float) -> None:
+def linesample_fraction(infile: str, fraction: float) -> None:
     """
     Print a fraction of the lines in an input file.
 
@@ -63,7 +61,7 @@ def sample_by_fraction(infile: str, fraction: float) -> None:
             print(line.strip())
 
 
-def sample_by_number(infile: str, number: int) -> None:
+def linesample_number(infile: str, number: int) -> None:
     """
     Print a number of randomly-selected lines from an input file.
 
@@ -100,6 +98,31 @@ def sample_by_number(infile: str, number: int) -> None:
         print(line.strip())
 
 
+def linesample(infile: str, param: Union[int, float]) -> None:
+    """
+    Randomly sample a fraction or number of lines from the input file.
+
+    Args:
+        infile: the path to the input file.
+        param: a value representing either the fraction or the number of
+            lines to sample.
+
+    Returns:
+        None.
+
+    Raises:
+        ValueError if param is negative or a float greater than 1.
+    """
+    if param < 0:
+        raise ValueError('Parameter must be nonnegative.')
+    if 0.0 < param < 1.0:
+        linesample_fraction(infile, param)
+    elif type(param) == int:
+        linesample_number(infile, param)
+    else:
+        raise ValueError('Parameter must be an integer if greater than 1.')
+
+
 def sample_lines(infile: str, seed: Optional[int] = None,
                  fraction: Optional[float] = None,
                  number: Optional[int] = None) -> None:
@@ -113,11 +136,11 @@ def sample_lines(infile: str, seed: Optional[int] = None,
     number generator to determine whether to print each line independently.
 
     Args:
-        `infile` (str): the path to the input file.
-        `seed` (int): the seed for the random number generator. The default
-                      is `None`, which will cause the RNG to use system time.
-        `fraction` (float): the probability with which to print each line.
-        `number` (int): a number of lines to return.
+        infile: the path to the input file.
+        seed: the seed for the random number generator. The default is `None`,
+            which will cause the RNG to use system time.
+        fraction: the probability with which to print each line.
+        number: a number of lines to return.
 
     Returns:
         None.
@@ -127,58 +150,9 @@ def sample_lines(infile: str, seed: Optional[int] = None,
     """
     if fraction is None and number is None:
         raise ValueError('Either fraction or number must be given.')
-    random.seed(seed)
-    if fraction is not None:
-        if fraction < 0.0 or fraction > 1.0:
-            raise ValueError('Sampling fraction must be between 0 and 1')
-        sample_by_fraction(infile, fraction)
-    elif number is not None:
-        if number < 1:
-            raise ValueError('Number of lines must be a positive integer.')
-        sample_by_number(infile, number)
-    else:
+    if fraction is not None and number is not None:
         raise ValueError('Only one of fraction or number may be given.')
+    random.seed(seed)
+    param = fraction if fraction is not None else number
+    linesample(infile, param)
 
-
-def parse(args: List[str] = sys.argv) -> argparse.Namespace:
-    """
-    Parse arguments to the main function.
-
-    Args:
-        `args` (list): a list of arguments (`sys.argv` by default).
-
-    Returns:
-        An `argparse.Namespace` instance containing the attributes resulting
-        from the parsed arguments. If neither a fraction of lines or a
-        number of lines is specified, the program will print an error and
-        usage message and exit with status code 2.
-    """
-    parser = argparse.ArgumentParser(args)
-    parser.add_argument('infile', default='-', help='input file')
-    parser.add_argument('-s', '--seed', default=None, type=int,
-                        help='seed for random number generator')
-    group = parser.add_mutually_exclusive_group()
-    group.add_argument('-f', '--fraction', type=float,
-                       help='fraction of lines to select')
-    group.add_argument('-n', '--number', type=int,
-                       help='number of lines to select')
-
-    args = parser.parse_args()
-
-    # Check if neither fraction nor number has been set after parsing.
-    # Checking whether both were set is not necessary because we defined a
-    # mutually exclusive group above.
-    if args.fraction is None and args.number is None:
-        parser.error('A value for exactly one of -f/--fraction or '
-                     '-n/--number is required.')
-
-    return args
-
-
-def main() -> None:
-    args = parse()
-    sample_lines(args.infile, args.seed, args.fraction, args.number)
-
-
-if __name__ == '__main__':
-    main()
